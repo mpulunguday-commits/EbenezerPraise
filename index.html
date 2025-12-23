@@ -23,7 +23,6 @@
             function showBootError(msg, details) {
                 const root = document.getElementById('root');
                 if (root) {
-                    // Properly extract error details to avoid [object Object]
                     let detailMsg = 'No specific details provided.';
                     if (details) {
                         if (typeof details === 'string') {
@@ -63,7 +62,7 @@
                 
                 if (isResourceError) {
                     const src = target.src || target.href || 'Unknown source';
-                    showBootError('Failed to load system components.', `Resource failed: ${src}\n\nThis usually occurs when the build hasn't finished deploying or dependencies are missing.`);
+                    showBootError('Failed to load system components.', `Resource failed: ${src}\n\nThis usually occurs when the build process is incomplete or dependencies are missing.`);
                     return;
                 }
 
@@ -127,6 +126,6 @@
         </div>
     </div>
     <!-- Vite will bundle this into a standard JS file for production -->
-    <script type="module" src="./index.tsx"></script>
+    <script type="module" src="/index.tsx"></script>
 </body>
 </html>

@@ -23,19 +23,20 @@
             function showBootError(msg, details) {
                 const root = document.getElementById('root');
                 if (root) {
-                    // Safe stringification for error details to avoid [object Object]
-                    let detailString = 'No additional details available.';
-                    try {
-                        if (details instanceof Error) {
-                            detailString = `Error: ${details.message}\nStack: ${details.stack}`;
-                        } else if (typeof details === 'object' && details !== null) {
-                            // Try to extract useful info from common error-like objects
-                            detailString = JSON.stringify(details, Object.getOwnPropertyNames(details), 2);
-                        } else if (details) {
-                            detailString = String(details);
+                    // Properly extract error details to avoid [object Object]
+                    let detailMsg = 'No specific details provided.';
+                    if (details) {
+                        if (typeof details === 'string') {
+                            detailMsg = details;
+                        } else if (details instanceof Error) {
+                            detailMsg = details.message + '\n' + (details.stack || '');
+                        } else if (typeof details === 'object') {
+                            try {
+                                detailMsg = JSON.stringify(details, Object.getOwnPropertyNames(details), 2);
+                            } catch (e) {
+                                detailMsg = 'Unserializable error object: ' + String(details);
+                            }
                         }
-                    } catch (e) {
-                        detailString = 'Error stringification failed: ' + e.message;
                     }
 
                     root.innerHTML = `
@@ -46,7 +47,7 @@
                                 </div>
                                 <h1 style="color: #e11d48; font-size: 20px; font-weight: 900; margin-bottom: 12px;">System Boot Failure</h1>
                                 <p style="color: #64748b; font-size: 14px; line-height: 1.6; margin-bottom: 16px;">${msg}</p>
-                                <pre style="text-align: left; background: #f8fafc; padding: 12px; border-radius: 12px; font-size: 10px; color: #ef4444; overflow: auto; border: 1px solid #e2e8f0; margin-bottom: 20px; font-family: monospace; white-space: pre-wrap;">${detailString}</pre>
+                                <pre style="text-align: left; background: #f8fafc; padding: 12px; border-radius: 12px; font-size: 10px; color: #ef4444; overflow: auto; border: 1px solid #e2e8f0; margin-bottom: 20px; font-family: monospace; white-space: pre-wrap;">${detailMsg}</pre>
                                 <button onclick="window.location.reload()" style="padding: 14px 24px; background: #2563eb; color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; width: 100%; transition: opacity 0.2s;">Retry System Load</button>
                                 <p style="margin-top: 16px; font-size: 11px; color: #94a3b8;">Region: Mpulungu/Central Connection. Check your internet connectivity or firewall.</p>
                             </div>
@@ -56,13 +57,13 @@
             }
 
             window.addEventListener('error', function(e) {
-                // Detect script/link load failures (resource errors)
+                // Focus on script/link load failures (resource errors)
                 const target = e.target || e.srcElement;
                 const isResourceError = target && (target.tagName === 'SCRIPT' || target.tagName === 'LINK');
                 
                 if (isResourceError) {
                     const src = target.src || target.href || 'Unknown source';
-                    showBootError('Failed to load system components.', `The browser was unable to fetch a required resource: ${src}\nThis is common on slow connections or if a file was moved.`);
+                    showBootError('Failed to load system components.', `Resource failed: ${src}\n\nThis usually occurs when the build hasn't finished deploying or dependencies are missing.`);
                     return;
                 }
 
@@ -125,6 +126,7 @@
             <p style="margin-top: 8px; font-size: 11px; color: #94a3b8; font-weight: 500;">Establishing Secure Data Tunnel...</p>
         </div>
     </div>
-    <script type="module" src="/index.tsx"></script>
+    <!-- Vite will bundle this into a standard JS file for production -->
+    <script type="module" src="./index.tsx"></script>
 </body>
 </html>

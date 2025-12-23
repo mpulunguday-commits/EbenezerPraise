@@ -8,7 +8,7 @@
     <script>
         // Polyfill and Global Error Catching for Early Boot Phase
         (function() {
-            // Enhanced process shim
+            // Enhanced process shim for browser environment
             window.process = { 
                 env: { 
                     NODE_ENV: 'production',
@@ -32,8 +32,8 @@
                                 <h1 style="color: #e11d48; font-size: 20px; font-weight: 900; margin-bottom: 12px;">System Boot Failure</h1>
                                 <p style="color: #64748b; font-size: 14px; line-height: 1.6; margin-bottom: 16px;">${msg}</p>
                                 ${details ? `<pre style="text-align: left; background: #f8fafc; padding: 12px; border-radius: 12px; font-size: 10px; color: #ef4444; overflow: auto; border: 1px solid #e2e8f0; margin-bottom: 20px; font-family: monospace; white-space: pre-wrap;">${details}</pre>` : ''}
-                                <button onclick="window.location.reload()" style="padding: 14px 24px; background: #2563eb; color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; width: 100%; transition: opacity 0.2s;">Retry Connection</button>
-                                <p style="margin-top: 16px; font-size: 11px; color: #94a3b8;">Region: Mpulungu/Central. Check if your network provider blocks esm.sh CDN.</p>
+                                <button onclick="window.location.reload()" style="padding: 14px 24px; background: #2563eb; color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; width: 100%; transition: opacity 0.2s;">Retry System Load</button>
+                                <p style="margin-top: 16px; font-size: 11px; color: #94a3b8;">Region: Mpulungu/Central Connection. Check your internet connectivity or firewall settings.</p>
                             </div>
                         </div>
                     `;
@@ -41,30 +41,28 @@
             }
 
             window.addEventListener('error', function(e) {
-                const isModuleError = e.target.tagName === 'SCRIPT' || e.message?.includes('import') || e.message?.includes('module');
-                if (isModuleError) {
-                    console.error('Critical Module Error:', e);
-                    showBootError('Failed to load a system component from the cloud.', e.message || 'CDN response failed or timed out.');
+                // Ignore harmless errors, focus on script load failures
+                if (e.target.tagName === 'SCRIPT' || e.message?.includes('import') || e.message?.includes('module')) {
+                    console.error('Critical Script Error:', e);
+                    showBootError('Failed to load system components.', 'The browser was unable to retrieve the application code. This usually happens on slow connections or when a deployment is in progress.');
                 }
             }, true);
 
             window.onunhandledrejection = function(event) {
                 console.error('Unhandled System Rejection:', event.reason);
-                showBootError('Cloud synchronization failed.', event.reason?.message || 'The database connection was interrupted.');
+                // If it's a Supabase error or similar network failure
+                if (event.reason?.message?.includes('fetch')) {
+                    showBootError('Cloud Link Interrupted', 'The database connection was refused. Please check your network or try again in a moment.');
+                }
             };
 
-            // Enhanced safety timeout
+            // Safety timeout: 30 seconds to mount the React app
             setTimeout(() => {
                 const root = document.getElementById('root');
                 if (root && root.getAttribute('data-booting') === "true") {
-                    // Final hard failure check
-                    setTimeout(() => {
-                        if (root.getAttribute('data-booting') === "true") {
-                            showBootError('Connection Timed Out', 'The system took more than 45 seconds to initialize. This usually points to a weak internet connection or a blocked library provider (esm.sh).');
-                        }
-                    }, 35000);
+                    showBootError('Initialization Timeout', 'The application is taking longer than expected to start. Please refresh the page.');
                 }
-            }, 10000);
+            }, 30000);
         })();
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -75,28 +73,25 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
         #root { min-height: 100vh; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@19.0.0",
-    "react-dom": "https://esm.sh/react-dom@19.0.0",
-    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
-    "react/jsx-runtime": "https://esm.sh/react@19.0.0/jsx-runtime",
-    "react/": "https://esm.sh/react@19.0.0/",
-    "react-dom/": "https://esm.sh/react-dom@19.0.0/",
-    "@google/genai": "https://esm.sh/@google/genai@1.3.0",
-    "recharts": "https://esm.sh/recharts@2.15.0?external=react,react-dom",
-    "lucide-react": "https://esm.sh/lucide-react@0.460.0?external=react,react-dom",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.46.1",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
     "path": "https://esm.sh/path@^0.12.7",
+    "url": "https://esm.sh/url@^0.11.4",
     "vite": "https://esm.sh/vite@^7.3.0",
-    "url": "https://esm.sh/url@^0.11.4"
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "recharts": "https://esm.sh/recharts@^3.6.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.89.0",
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0"
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
 </head>
 <body class="bg-gray-50 text-gray-900">
     <div id="root" data-booting="true">
@@ -105,12 +100,11 @@
                 <div style="width: 56px; height: 56px; border: 4px solid #e2e8f0; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;"></div>
                 <div style="position: absolute; top: 0; left: 0; width: 56px; height: 56px; border: 4px solid transparent; border-bottom-color: #93c5fd; border-radius: 50%; animation: spin 1.2s linear infinite;"></div>
             </div>
-            <p style="margin-top: 24px; font-weight: 800; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: #1e293b;">Initializing Ebenezer OS</p>
-            <p style="margin-top: 8px; font-size: 11px; color: #94a3b8; font-weight: 500;">Securing Cloud Link (Mpulungu Central)...</p>
+            <p style="margin-top: 24px; font-weight: 800; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: #1e293b;">Booting Ebenezer OS</p>
+            <p style="margin-top: 8px; font-size: 11px; color: #94a3b8; font-weight: 500;">Establishing Secure Data Tunnel...</p>
         </div>
     </div>
-    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
-    <script type="module" src="./index.tsx"></script>
-<script type="module" src="/index.tsx"></script>
+    <!-- Use a single, absolute entry point for Vite to correctly resolve assets -->
+    <script type="module" src="/index.tsx"></script>
 </body>
 </html>

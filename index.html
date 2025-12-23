@@ -1,0 +1,116 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ebenezer Praise Team Management - Mpulungu Central UCZ</title>
+    <script>
+        // Polyfill and Global Error Catching for Early Boot Phase
+        (function() {
+            // Enhanced process shim
+            window.process = { 
+                env: { 
+                    NODE_ENV: 'production',
+                    API_KEY: "" 
+                }, 
+                browser: true, 
+                version: '',
+                nextTick: (cb) => setTimeout(cb, 0) 
+            };
+            window.global = window;
+
+            function showBootError(msg, details) {
+                const root = document.getElementById('root');
+                if (root) {
+                    root.innerHTML = `
+                        <div style="padding: 40px; font-family: 'Inter', sans-serif; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #f8fafc;">
+                            <div style="background: #fff; padding: 32px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.05); border: 1px solid #fee2e2; max-width: 450px; width: 100%;">
+                                <div style="background: #fff1f2; color: #e11d48; width: 48px; height: 48px; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                </div>
+                                <h1 style="color: #e11d48; font-size: 20px; font-weight: 900; margin-bottom: 12px;">System Boot Failure</h1>
+                                <p style="color: #64748b; font-size: 14px; line-height: 1.6; margin-bottom: 16px;">${msg}</p>
+                                ${details ? `<pre style="text-align: left; background: #f8fafc; padding: 12px; border-radius: 12px; font-size: 10px; color: #ef4444; overflow: auto; border: 1px solid #e2e8f0; margin-bottom: 20px; font-family: monospace; white-space: pre-wrap;">${details}</pre>` : ''}
+                                <button onclick="window.location.reload()" style="padding: 14px 24px; background: #2563eb; color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; width: 100%; transition: opacity 0.2s;">Retry Connection</button>
+                                <p style="margin-top: 16px; font-size: 11px; color: #94a3b8;">Region: Mpulungu/Central. Check if your network provider blocks esm.sh CDN.</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            window.addEventListener('error', function(e) {
+                const isModuleError = e.target.tagName === 'SCRIPT' || e.message?.includes('import') || e.message?.includes('module');
+                if (isModuleError) {
+                    console.error('Critical Module Error:', e);
+                    showBootError('Failed to load a system component from the cloud.', e.message || 'CDN response failed or timed out.');
+                }
+            }, true);
+
+            window.onunhandledrejection = function(event) {
+                console.error('Unhandled System Rejection:', event.reason);
+                showBootError('Cloud synchronization failed.', event.reason?.message || 'The database connection was interrupted.');
+            };
+
+            // Enhanced safety timeout
+            setTimeout(() => {
+                const root = document.getElementById('root');
+                if (root && root.getAttribute('data-booting') === "true") {
+                    // Final hard failure check
+                    setTimeout(() => {
+                        if (root.getAttribute('data-booting') === "true") {
+                            showBootError('Connection Timed Out', 'The system took more than 45 seconds to initialize. This usually points to a weak internet connection or a blocked library provider (esm.sh).');
+                        }
+                    }, 35000);
+                }
+            }, 10000);
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; background-color: #f8fafc; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        #root { min-height: 100vh; }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@19.0.0",
+    "react-dom": "https://esm.sh/react-dom@19.0.0",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
+    "react/jsx-runtime": "https://esm.sh/react@19.0.0/jsx-runtime",
+    "react/": "https://esm.sh/react@19.0.0/",
+    "react-dom/": "https://esm.sh/react-dom@19.0.0/",
+    "@google/genai": "https://esm.sh/@google/genai@1.3.0",
+    "recharts": "https://esm.sh/recharts@2.15.0?external=react,react-dom",
+    "lucide-react": "https://esm.sh/lucide-react@0.460.0?external=react,react-dom",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.46.1",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "path": "https://esm.sh/path@^0.12.7",
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "url": "https://esm.sh/url@^0.11.4"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="bg-gray-50 text-gray-900">
+    <div id="root" data-booting="true">
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #f8fafc; color: #64748b;">
+            <div style="position: relative;">
+                <div style="width: 56px; height: 56px; border: 4px solid #e2e8f0; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;"></div>
+                <div style="position: absolute; top: 0; left: 0; width: 56px; height: 56px; border: 4px solid transparent; border-bottom-color: #93c5fd; border-radius: 50%; animation: spin 1.2s linear infinite;"></div>
+            </div>
+            <p style="margin-top: 24px; font-weight: 800; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: #1e293b;">Initializing Ebenezer OS</p>
+            <p style="margin-top: 8px; font-size: 11px; color: #94a3b8; font-weight: 500;">Securing Cloud Link (Mpulungu Central)...</p>
+        </div>
+    </div>
+    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+    <script type="module" src="./index.tsx"></script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>

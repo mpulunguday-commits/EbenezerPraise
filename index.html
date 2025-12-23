@@ -23,6 +23,21 @@
             function showBootError(msg, details) {
                 const root = document.getElementById('root');
                 if (root) {
+                    // Safe stringification for error details to avoid [object Object]
+                    let detailString = 'No additional details available.';
+                    try {
+                        if (details instanceof Error) {
+                            detailString = `Error: ${details.message}\nStack: ${details.stack}`;
+                        } else if (typeof details === 'object' && details !== null) {
+                            // Try to extract useful info from common error-like objects
+                            detailString = JSON.stringify(details, Object.getOwnPropertyNames(details), 2);
+                        } else if (details) {
+                            detailString = String(details);
+                        }
+                    } catch (e) {
+                        detailString = 'Error stringification failed: ' + e.message;
+                    }
+
                     root.innerHTML = `
                         <div style="padding: 40px; font-family: 'Inter', sans-serif; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #f8fafc;">
                             <div style="background: #fff; padding: 32px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.05); border: 1px solid #fee2e2; max-width: 450px; width: 100%;">
@@ -31,9 +46,9 @@
                                 </div>
                                 <h1 style="color: #e11d48; font-size: 20px; font-weight: 900; margin-bottom: 12px;">System Boot Failure</h1>
                                 <p style="color: #64748b; font-size: 14px; line-height: 1.6; margin-bottom: 16px;">${msg}</p>
-                                ${details ? `<pre style="text-align: left; background: #f8fafc; padding: 12px; border-radius: 12px; font-size: 10px; color: #ef4444; overflow: auto; border: 1px solid #e2e8f0; margin-bottom: 20px; font-family: monospace; white-space: pre-wrap;">${details}</pre>` : ''}
+                                <pre style="text-align: left; background: #f8fafc; padding: 12px; border-radius: 12px; font-size: 10px; color: #ef4444; overflow: auto; border: 1px solid #e2e8f0; margin-bottom: 20px; font-family: monospace; white-space: pre-wrap;">${detailString}</pre>
                                 <button onclick="window.location.reload()" style="padding: 14px 24px; background: #2563eb; color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; width: 100%; transition: opacity 0.2s;">Retry System Load</button>
-                                <p style="margin-top: 16px; font-size: 11px; color: #94a3b8;">Region: Mpulungu/Central Connection. Check your internet connectivity or firewall settings.</p>
+                                <p style="margin-top: 16px; font-size: 11px; color: #94a3b8;">Region: Mpulungu/Central Connection. Check your internet connectivity or firewall.</p>
                             </div>
                         </div>
                     `;
@@ -41,28 +56,34 @@
             }
 
             window.addEventListener('error', function(e) {
-                // Ignore harmless errors, focus on script load failures
-                if (e.target.tagName === 'SCRIPT' || e.message?.includes('import') || e.message?.includes('module')) {
-                    console.error('Critical Script Error:', e);
-                    showBootError('Failed to load system components.', 'The browser was unable to retrieve the application code. This usually happens on slow connections or when a deployment is in progress.');
+                // Detect script/link load failures (resource errors)
+                const target = e.target || e.srcElement;
+                const isResourceError = target && (target.tagName === 'SCRIPT' || target.tagName === 'LINK');
+                
+                if (isResourceError) {
+                    const src = target.src || target.href || 'Unknown source';
+                    showBootError('Failed to load system components.', `The browser was unable to fetch a required resource: ${src}\nThis is common on slow connections or if a file was moved.`);
+                    return;
+                }
+
+                // Handle standard runtime errors
+                if (e.message?.includes('import') || e.message?.includes('module') || e.message?.includes('unexpected token')) {
+                    showBootError('System Component Conflict', e.message);
                 }
             }, true);
 
             window.onunhandledrejection = function(event) {
                 console.error('Unhandled System Rejection:', event.reason);
-                // If it's a Supabase error or similar network failure
-                if (event.reason?.message?.includes('fetch')) {
-                    showBootError('Cloud Link Interrupted', 'The database connection was refused. Please check your network or try again in a moment.');
-                }
+                showBootError('Cloud Connection Failed', event.reason);
             };
 
-            // Safety timeout: 30 seconds to mount the React app
+            // Safety timeout: 45 seconds to mount the React app
             setTimeout(() => {
                 const root = document.getElementById('root');
                 if (root && root.getAttribute('data-booting') === "true") {
-                    showBootError('Initialization Timeout', 'The application is taking longer than expected to start. Please refresh the page.');
+                    showBootError('Initialization Timeout', 'The application is taking too long to start. This may be due to a slow network or a blocked cloud resource.');
                 }
-            }, 30000);
+            }, 45000);
         })();
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -78,17 +99,17 @@
 <script type="importmap">
 {
   "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "recharts": "https://esm.sh/recharts@^3.6.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.89.0",
     "path": "https://esm.sh/path@^0.12.7",
     "url": "https://esm.sh/url@^0.11.4",
     "vite": "https://esm.sh/vite@^7.3.0",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "recharts": "https://esm.sh/recharts@^3.6.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.89.0",
-    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0"
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
 </script>
@@ -104,7 +125,6 @@
             <p style="margin-top: 8px; font-size: 11px; color: #94a3b8; font-weight: 500;">Establishing Secure Data Tunnel...</p>
         </div>
     </div>
-    <!-- Use a single, absolute entry point for Vite to correctly resolve assets -->
     <script type="module" src="/index.tsx"></script>
 </body>
 </html>

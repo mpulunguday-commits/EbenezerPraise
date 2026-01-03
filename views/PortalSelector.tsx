@@ -14,22 +14,27 @@ import {
   Key,
   BadgeAlert,
   Music,
-  Users
+  Users,
+  Sparkles,
+  UserPlus
 } from 'lucide-react';
-import { supabase } from '../supabaseClient.ts';
 
 interface LoginProps {
   onLoginSuccess: (role: UserRole, user: any) => void;
   members: Member[];
+  setMembers?: React.Dispatch<React.SetStateAction<Member[]>>;
 }
 
-// Fixed the missing component logic and added default export to resolve "no default export" error in App.tsx
-const PortalSelector: React.FC<LoginProps> = ({ onLoginSuccess, members }) => {
+const PortalSelector: React.FC<LoginProps> = ({ onLoginSuccess, members, setMembers }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // First run state
+  const isFirstRun = members.length === 0;
+  const [setupName, setSetupName] = useState('');
 
   // Helper to map directory roles to system portal roles
   const mapTeamRoleToPortalRole = (teamRole: string): UserRole => {
@@ -42,6 +47,41 @@ const PortalSelector: React.FC<LoginProps> = ({ onLoginSuccess, members }) => {
     return UserRole.MEMBER;
   };
 
+  const handleSetup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!setMembers) return;
+    setIsLoading(true);
+
+    try {
+      const firstAdmin: Member = {
+        id: Math.random().toString(36).substr(2, 9),
+        name: setupName,
+        role: 'Team Leader',
+        voicePart: 'Tenor',
+        cellGroup: 'Central',
+        phoneNumber: '',
+        dateOfBirth: '',
+        status: 'Active',
+        joinedDate: new Date().toISOString().split('T')[0],
+        username: username.toLowerCase().trim(),
+        password: password
+      };
+
+      setMembers([firstAdmin]);
+      // Short delay to ensure state update/save
+      setTimeout(() => {
+        onLoginSuccess(UserRole.ADMIN, {
+          member_id: firstAdmin.id,
+          username: firstAdmin.username,
+          display_name: firstAdmin.name
+        });
+      }, 500);
+    } catch (err) {
+      setError("Initialization failed.");
+      setIsLoading(false);
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -50,21 +90,7 @@ const PortalSelector: React.FC<LoginProps> = ({ onLoginSuccess, members }) => {
     const lowerUser = username.toLowerCase().trim();
 
     try {
-      // 1. Check for hardcoded legacy demo accounts first
-      const demoUsers: Record<string, any> = {
-        'admin': { role: UserRole.ADMIN, display_name: 'Admin Commander' },
-        'sec': { role: UserRole.SECRETARIAT, display_name: 'Secretary General' },
-        'trez': { role: UserRole.TREASURER, display_name: 'Team Treasurer' },
-        'disc': { role: UserRole.DISCIPLINARY, display_name: 'Gavel Officer' },
-        'music': { role: UserRole.MUSIC_DEPT, display_name: 'Music Director' },
-      };
-
-      if (demoUsers[lowerUser] && password === 'admin123') {
-        onLoginSuccess(demoUsers[lowerUser].role, { ...demoUsers[lowerUser], username: lowerUser });
-        return;
-      }
-
-      // 2. Check local directory (MOCK_MEMBERS/State)
+      // Check current personnel directory
       const member = members.find(m => m.username?.toLowerCase() === lowerUser);
       if (member && member.password === password) {
         onLoginSuccess(mapTeamRoleToPortalRole(member.role), {
@@ -75,14 +101,92 @@ const PortalSelector: React.FC<LoginProps> = ({ onLoginSuccess, members }) => {
         return;
       }
 
-      // 3. Fallback Supabase check (if implemented) or default error
-      setError("Invalid credentials. Please verify your portal access keys.");
+      setError("Invalid credentials. Personnel not recognized.");
     } catch (err: any) {
-      setError(err.message || "Portal access denied. System error.");
+      setError("Portal access denied. Connection failed.");
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (isFirstRun) {
+    return (
+      <div className="w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in duration-500">
+        <div className="p-10 bg-gradient-to-br from-blue-600 to-indigo-900 text-white relative overflow-hidden">
+          <div className="relative z-10 flex items-center space-x-4">
+            <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl shadow-lg">
+              <Sparkles size={24} />
+            </div>
+            <div>
+              <h3 className="text-xl font-black tracking-tight">System Setup</h3>
+              <p className="text-xs font-bold text-blue-100 uppercase tracking-widest mt-1">First Time Initialization</p>
+            </div>
+          </div>
+          <Church size={120} className="absolute -right-8 -bottom-8 opacity-10 text-white" />
+        </div>
+
+        <form onSubmit={handleSetup} className="p-10 space-y-6">
+          <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl text-blue-700 space-y-2">
+            <p className="text-xs font-black uppercase tracking-tight flex items-center">
+              <ShieldCheck size={14} className="mr-2" /> Security Protocol
+            </p>
+            <p className="text-[10px] font-bold leading-relaxed">
+              No personnel records found. Please create the master Administrator account to begin system operations.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Full Name</label>
+              <div className="relative group">
+                <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" size={20} />
+                <input 
+                  type="text"
+                  required
+                  value={setupName}
+                  onChange={(e) => setSetupName(e.target.value)}
+                  placeholder="e.g. John Phiri"
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Master Username</label>
+              <input 
+                type="text"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="admin"
+                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Master Password</label>
+              <input 
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <button 
+            type="submit"
+            disabled={isLoading}
+            className="w-full py-5 bg-slate-900 hover:bg-black text-white rounded-2xl font-black shadow-2xl transition-all active:scale-95 flex items-center justify-center space-x-3 disabled:opacity-50"
+          >
+            {isLoading ? <Loader2 className="animate-spin" size={24} /> : <span>Initialize System</span>}
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in duration-500">
@@ -164,7 +268,7 @@ const PortalSelector: React.FC<LoginProps> = ({ onLoginSuccess, members }) => {
         <div className="pt-4 flex flex-col items-center space-y-4">
           <div className="flex items-center space-x-2 text-[10px] font-black text-slate-300 uppercase tracking-widest">
             <ShieldCheck size={14} />
-            <span>End-to-End Encrypted Session</span>
+            <span>Encrypted Local Session</span>
           </div>
         </div>
       </form>

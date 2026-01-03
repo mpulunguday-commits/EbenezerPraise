@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Users, TrendingUp, Music, AlertCircle, Sparkles, Calendar, ArrowUpRight, Gift, FileText, BadgeAlert } from 'lucide-react';
+import { Users, TrendingUp, Music, AlertCircle, Sparkles, Calendar, ArrowUpRight, Gift, FileText, BadgeAlert, Loader2 } from 'lucide-react';
 import { MOCK_SONGS } from '../constants.tsx';
 import { getTeamSummary } from '../geminiService.ts';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
@@ -19,6 +19,7 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ members, finance, cases, events, minutes, attendance, onNavigate, currentRole }) => {
   const [aiSummary, setAiSummary] = useState<string>("Analyzing team performance...");
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const isAdminOrSec = [UserRole.ADMIN, UserRole.SECRETARIAT].includes(currentRole);
   const isFinanceHidden = [UserRole.MEMBER, UserRole.DISCIPLINARY, UserRole.MUSIC_DEPT].includes(currentRole);
@@ -66,17 +67,20 @@ const Dashboard: React.FC<DashboardProps> = ({ members, finance, cases, events, 
     },
   ];
 
+  const fetchSummary = async () => {
+    setIsRefreshing(true);
+    const summary = await getTeamSummary({
+      memberCount: members.length,
+      financialSummary: isFinanceHidden ? "Summary restricted" : finance,
+      recentSongs: MOCK_SONGS.length,
+      disciplinaryCount: cases.length,
+      role: currentRole
+    });
+    setAiSummary(summary);
+    setIsRefreshing(false);
+  };
+
   useEffect(() => {
-    const fetchSummary = async () => {
-      const summary = await getTeamSummary({
-        memberCount: members.length,
-        financialSummary: isFinanceHidden ? "Summary restricted" : finance,
-        recentSongs: MOCK_SONGS.length,
-        disciplinaryCount: cases.length,
-        role: currentRole
-      });
-      setAiSummary(summary);
-    };
     fetchSummary();
   }, [members, finance, cases, isFinanceHidden]);
 
@@ -169,28 +173,34 @@ const Dashboard: React.FC<DashboardProps> = ({ members, finance, cases, events, 
                 </button>
               </div>
               <div className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} fontWeight="bold" tickLine={false} axisLine={false} />
-                    <YAxis stroke="#94a3b8" fontSize={10} fontWeight="bold" tickLine={false} axisLine={false} />
-                    <Tooltip 
-                      cursor={{fill: '#f8fafc'}}
-                      contentStyle={{ 
-                        borderRadius: '1.5rem', 
-                        border: 'none', 
-                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-                        fontSize: '12px',
-                        fontWeight: '800'
-                      }}
-                    />
-                    <Bar dataKey="amount" radius={[6, 6, 0, 0]} barSize={32}>
-                      {chartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.type === 'Income' ? '#10b981' : '#f43f5e'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                {chartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} fontWeight="bold" tickLine={false} axisLine={false} />
+                      <YAxis stroke="#94a3b8" fontSize={10} fontWeight="bold" tickLine={false} axisLine={false} />
+                      <Tooltip 
+                        cursor={{fill: '#f8fafc'}}
+                        contentStyle={{ 
+                          borderRadius: '1.5rem', 
+                          border: 'none', 
+                          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+                          fontSize: '12px',
+                          fontWeight: '800'
+                        }}
+                      />
+                      <Bar dataKey="amount" radius={[6, 6, 0, 0]} barSize={32}>
+                        {chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.type === 'Income' ? '#10b981' : '#f43f5e'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center border-2 border-dashed border-slate-100 rounded-3xl">
+                    <p className="text-slate-400 font-bold italic text-sm">No recent transactions found.</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -260,13 +270,24 @@ const Dashboard: React.FC<DashboardProps> = ({ members, finance, cases, events, 
                 </div>
               </div>
               
-              <div className="flex-1">
-                <p className="text-blue-100 leading-relaxed italic text-sm font-medium border-l-2 border-blue-500/50 pl-5 py-2">
-                  "{aiSummary}"
-                </p>
+              <div className="flex-1 min-h-[120px]">
+                {isRefreshing ? (
+                  <div className="flex flex-col items-center justify-center h-full space-y-4">
+                    <Loader2 className="animate-spin text-blue-400" size={32} />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-300 animate-pulse">Scanning Archives...</p>
+                  </div>
+                ) : (
+                  <p className="text-blue-100 leading-relaxed italic text-sm font-medium border-l-2 border-blue-500/50 pl-5 py-2">
+                    "{aiSummary}"
+                  </p>
+                )}
               </div>
 
-              <button className="mt-8 w-full py-4 bg-white/10 hover:bg-white text-blue-200 hover:text-indigo-900 border border-white/10 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-lg active:scale-95">
+              <button 
+                onClick={fetchSummary}
+                disabled={isRefreshing}
+                className="mt-8 w-full py-4 bg-white/10 hover:bg-white text-blue-200 hover:text-indigo-900 border border-white/10 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+              >
                 Refine Strategic Analysis
               </button>
             </div>
@@ -291,6 +312,9 @@ const Dashboard: React.FC<DashboardProps> = ({ members, finance, cases, events, 
                     <p className="text-sm font-bold text-slate-800 group-hover:text-blue-600 truncate">{m.title}</p>
                   </button>
                 ))}
+                {minutes.length === 0 && (
+                  <div className="py-8 text-center text-slate-300 italic text-xs font-bold">No minutes archived.</div>
+                )}
               </div>
             </div>
           )}
@@ -325,7 +349,7 @@ const Dashboard: React.FC<DashboardProps> = ({ members, finance, cases, events, 
                 <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></div>
                 {event.location}
               </div>
-              <p className="text-[10px] font-black text-blue-50 mt-4 uppercase tracking-[0.2em]">
+              <p className="text-[10px] font-black text-slate-400 mt-4 uppercase tracking-[0.2em]">
                 {new Date(event.date).toLocaleDateString('en-ZM', { weekday: 'long', day: 'numeric', month: 'short' })}
               </p>
             </div>

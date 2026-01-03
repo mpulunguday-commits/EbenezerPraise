@@ -44,7 +44,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentRole, currentView, isOpen, onC
     { id: 'finance', label: 'General Finance', icon: Wallet, roles: [UserRole.ADMIN, UserRole.TREASURER] },
     { id: 'music', label: 'Music Dept', icon: Music, roles: [UserRole.ADMIN, UserRole.MUSIC_DEPT] },
     { id: 'disciplinary', label: 'Disciplinary Committee', icon: ShieldAlert, roles: [UserRole.ADMIN, UserRole.SECRETARIAT, UserRole.TREASURER, UserRole.DISCIPLINARY, UserRole.MEMBER] },
-    { id: 'minutes', label: 'Minutes', icon: FileText, roles: [UserRole.ADMIN, UserRole.SECRETARIAT, UserRole.DISCIPLINARY] },
+    { id: 'minutes', label: 'Minutes', icon: FileText, roles: [UserRole.ADMIN, UserRole.SECRETARIAT, UserRole.TREASURER, UserRole.MUSIC_DEPT, UserRole.DISCIPLINARY, UserRole.MEMBER] },
   ];
 
   return (

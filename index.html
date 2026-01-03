@@ -12,7 +12,6 @@
             window.process = { 
                 env: { 
                     NODE_ENV: 'production'
-                    // Do not hardcode API_KEY here, let Vite inject it
                 }, 
                 browser: true, 
                 version: '',
@@ -48,7 +47,7 @@
                                 <p style="color: #64748b; font-size: 14px; line-height: 1.6; margin-bottom: 16px;">${msg}</p>
                                 <pre style="text-align: left; background: #f8fafc; padding: 12px; border-radius: 12px; font-size: 10px; color: #ef4444; overflow: auto; border: 1px solid #e2e8f0; margin-bottom: 20px; font-family: monospace; white-space: pre-wrap;">${detailMsg}</pre>
                                 <button onclick="window.location.reload()" style="padding: 14px 24px; background: #2563eb; color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; width: 100%; transition: opacity 0.2s;">Retry System Load</button>
-                                <p style="margin-top: 16px; font-size: 11px; color: #94a3b8;">Region: Mpulungu/Central Connection. Check your internet connectivity or firewall.</p>
+                                <p style="margin-top: 16px; font-size: 11px; color: #94a3b8;">Region: Mpulungu/Central Connection. Check your internet connectivity.</p>
                             </div>
                         </div>
                     `;
@@ -61,7 +60,7 @@
                 
                 if (isResourceError) {
                     const src = target.src || target.href || 'Unknown source';
-                    showBootError('Failed to load system components.', `Resource failed: ${src}\n\nThis usually occurs when the build process is incomplete or dependencies are missing.`);
+                    showBootError('Failed to load system components.', `Resource failed: ${src}`);
                     return;
                 }
 
@@ -72,13 +71,13 @@
 
             window.onunhandledrejection = function(event) {
                 console.error('Unhandled System Rejection:', event.reason);
-                showBootError('Cloud Connection Failed', event.reason);
+                showBootError('System Rejection', event.reason);
             };
 
             setTimeout(() => {
                 const root = document.getElementById('root');
                 if (root && root.getAttribute('data-booting') === "true") {
-                    showBootError('Initialization Timeout', 'The application is taking too long to start. This may be due to a slow network or a blocked cloud resource.');
+                    showBootError('Initialization Timeout', 'The application is taking too long to start.');
                 }
             }, 45000);
         })();
@@ -102,7 +101,7 @@
     "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
     "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
     "recharts": "https://esm.sh/recharts@^3.6.0",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.89.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.48.1",
     "path": "https://esm.sh/path@^0.12.7",
     "url": "https://esm.sh/url@^0.11.4",
     "vite": "https://esm.sh/vite@^7.3.0",

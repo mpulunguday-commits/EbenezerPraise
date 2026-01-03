@@ -2,314 +2,272 @@
 import React, { useState, useRef } from 'react';
 import { MeetingMinutes, Member, UserRole } from '../types.ts';
 import { 
-  FileText, 
-  Plus, 
-  Search, 
-  Users, 
-  X, 
-  Save, 
-  Upload, 
-  Download,
-  Eye,
-  Trash2,
-  Tag,
-  Paperclip
+  FileText, X, Eye, Trash2, Calendar, Search, Plus, Save, Users, Info, BookOpen, Paperclip, Download, FileUp
 } from 'lucide-react';
 
 interface MinutesProps {
   members: Member[];
   minutesList: MeetingMinutes[];
   setMinutesList: React.Dispatch<React.SetStateAction<MeetingMinutes[]>>;
+  onDeleteMinutes: (id: string) => void;
   currentRole: UserRole;
 }
 
-const Minutes: React.FC<MinutesProps> = ({ members, minutesList, setMinutesList, currentRole }) => {
+const Minutes: React.FC<MinutesProps> = ({ members, minutesList, setMinutesList, onDeleteMinutes, currentRole }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewingMinutes, setViewingMinutes] = useState<MeetingMinutes | null>(null);
-  
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const canCreate = [UserRole.ADMIN, UserRole.SECRETARIAT].includes(currentRole);
 
-  // Expanded permissions to include Disciplinary Committee
-  const canEdit = [UserRole.ADMIN, UserRole.SECRETARIAT, UserRole.DISCIPLINARY].includes(currentRole);
-
-  // Form state
-  const [form, setForm] = useState({
+  const [newMinute, setNewMinute] = useState({
     title: '',
     date: new Date().toISOString().split('T')[0],
     category: 'General' as MeetingMinutes['category'],
-    attendees: [] as string[],
     content: '',
-    fileName: ''
+    attendees: '',
+    fileData: '' as string,
+    fileName: '' as string
   });
 
   const filteredMinutes = minutesList.filter(m => 
-    m.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    m.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
     m.content.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const handleSave = () => {
-    if (!form.title || !form.content || !canEdit) return;
-
-    const newEntry: MeetingMinutes = {
-      id: Math.random().toString(36).substr(2, 9),
-      title: form.title,
-      date: form.date,
-      category: form.category,
-      attendees: form.attendees,
-      content: form.content,
-      fileName: form.fileName || undefined
-    };
-
-    setMinutesList(prev => [newEntry, ...prev]);
-    setIsModalOpen(false);
-    resetForm();
-  };
-
-  const resetForm = () => {
-    setForm({
-      title: '',
-      date: new Date().toISOString().split('T')[0],
-      category: 'General',
-      attendees: [],
-      content: '',
-      fileName: ''
-    });
-  };
-
-  const toggleAttendee = (name: string) => {
-    if (!canEdit) return;
-    setForm(prev => ({
-      ...prev,
-      attendees: prev.attendees.includes(name) 
-        ? prev.attendees.filter(a => a !== name)
-        : [...prev.attendees, name]
-    }));
-  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setForm(prev => ({ ...prev, fileName: file.name }));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewMinute(prev => ({
+          ...prev,
+          fileData: reader.result as string,
+          fileName: file.name
+        }));
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  const handleDownload = (fileName: string) => {
-    const element = document.createElement("a");
-    const file = new Blob([`Simulated secure content for official team minute record: ${fileName}`], {type: 'text/plain'});
-    element.href = URL.createObjectURL(file);
-    element.download = fileName;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
+  const handleSaveMinutes = () => {
+    if (!newMinute.title || (!newMinute.content && !newMinute.fileData)) return;
+    
+    const minutes: MeetingMinutes = {
+      id: Math.random().toString(36).substr(2, 9),
+      title: newMinute.title,
+      date: newMinute.date,
+      category: newMinute.category,
+      content: newMinute.content,
+      attendees: newMinute.attendees.split(',').map(a => a.trim()).filter(a => a !== ''),
+      fileName: newMinute.fileName || undefined,
+      // We'll store the file data in a custom field for this session
+      // In a real app, this would be a URL to a storage bucket
+      ...(newMinute.fileData ? { fileData: newMinute.fileData } : {})
+    } as any;
+
+    setMinutesList(prev => [minutes, ...prev]);
+    setIsAddModalOpen(false);
+    setNewMinute({
+      title: '',
+      date: new Date().toISOString().split('T')[0],
+      category: 'General',
+      content: '',
+      attendees: '',
+      fileData: '',
+      fileName: ''
+    });
+  };
+
+  const handleDownload = (minutes: MeetingMinutes) => {
+    const data = (minutes as any).fileData;
+    if (!data) return;
+    
+    const link = document.createElement('a');
+    link.href = data;
+    link.download = minutes.fileName || 'minutes.pdf';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Meeting Minutes</h2>
-          <p className="text-gray-500">Official records of Mpulungu Central Ebenezer Praise Team meetings.</p>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Secretariat Archives</h2>
+          <p className="text-slate-500 text-sm font-medium">Official records of meeting proceedings and resolutions.</p>
         </div>
-        {canEdit && (
+        {canCreate && (
           <button 
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center space-x-2 bg-slate-900 hover:bg-slate-800 text-white px-5 py-3 rounded-xl font-bold shadow-lg transition-all active:scale-95"
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center space-x-2 bg-slate-900 text-white px-6 py-3.5 rounded-2xl font-black shadow-xl active:scale-95 transition-all"
           >
-            <Plus size={20} />
-            <span>Record Minutes</span>
+            <Plus size={18} />
+            <span>New Minutes</span>
           </button>
         )}
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between bg-gray-50/50">
+      <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden min-h-[400px]">
+        <div className="p-6 border-b border-slate-50 bg-slate-50/30">
           <div className="relative w-full md:w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
               type="text" 
-              placeholder="Search minutes..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-slate-500/10 focus:border-slate-500 outline-none transition-all"
+              placeholder="Search archive..." 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:ring-4 focus:ring-blue-500/10" 
             />
           </div>
         </div>
-
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Title & Category</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Attendees</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Attachment</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Actions</th>
+              <tr className="bg-slate-50 border-b border-slate-100">
+                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Archival Date</th>
+                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Attachment</th>
+                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Meeting Identification</th>
+                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-center text-slate-400">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-100">
               {filteredMinutes.map((m) => (
                 <tr key={m.id} className="hover:bg-slate-50 transition-colors group">
-                  <td className="px-6 py-4">
-                    <p className="text-sm font-bold text-slate-900">{m.date}</p>
-                    <p className="text-[10px] text-slate-400 font-bold">ID: {m.id}</p>
-                  </td>
-                  <td className="px-6 py-4">
-                    <p className="font-black text-gray-900 leading-tight">{m.title}</p>
-                    <div className="flex items-center space-x-1 mt-1">
-                      <Tag size={10} className="text-slate-400" />
-                      <span className="text-[10px] font-black text-slate-500 uppercase">{m.category}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex -space-x-2">
-                      {m.attendees.slice(0, 3).map((a, i) => (
-                        <div key={i} className="w-8 h-8 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-[10px] font-bold text-slate-600" title={a}>
-                          {a.charAt(0)}
-                        </div>
-                      ))}
-                      {m.attendees.length > 3 && (
-                        <div className="w-8 h-8 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-slate-400">
-                          +{m.attendees.length - 3}
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
+                  <td className="px-8 py-6 text-xs font-black text-slate-400 uppercase tracking-tighter">{m.date}</td>
+                  <td className="px-8 py-6 text-center">
                     {m.fileName ? (
-                      <div className="flex items-center space-x-2 text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg w-fit">
-                        <FileText size={14} />
-                        <span className="text-xs font-bold truncate max-w-[120px]">{m.fileName}</span>
+                      <div className="inline-flex items-center justify-center p-2 bg-blue-50 text-blue-600 rounded-lg">
+                        <Paperclip size={14} />
                       </div>
                     ) : (
-                      <span className="text-xs text-gray-300 italic">No attachment</span>
+                      <span className="text-slate-200">—</span>
                     )}
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex justify-center items-center space-x-2">
-                      <button 
-                        onClick={() => setViewingMinutes(m)}
-                        className="p-2 bg-slate-100 text-slate-600 hover:bg-slate-900 hover:text-white rounded-lg transition-all"
-                        title="View Full Minutes"
-                      >
-                        <Eye size={16} />
-                      </button>
+                  <td className="px-8 py-6">
+                    <div className="flex flex-col">
+                      <span className="text-[9px] font-black text-slate-300 uppercase mb-1 tracking-widest">{m.category}</span>
+                      <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{m.title}</span>
+                    </div>
+                  </td>
+                  <td className="px-8 py-6 text-center">
+                    <div className="flex justify-center space-x-3">
+                      <button onClick={() => setViewingMinutes(m)} className="p-3 text-slate-400 hover:text-blue-600 bg-slate-100 rounded-xl transition-all shadow-sm" title="View Full Text"><Eye size={18}/></button>
+                      {canCreate && (
+                        <button onClick={() => onDeleteMinutes(m.id)} className="p-3 text-slate-300 hover:text-red-500 bg-slate-100 rounded-xl transition-all shadow-sm" title="Delete Archive"><Trash2 size={18}/></button>
+                      )}
                     </div>
                   </td>
                 </tr>
               ))}
+              {filteredMinutes.length === 0 && (
+                 <tr><td colSpan={4} className="py-32 text-center text-slate-300 font-bold italic">No records found in the Ebenezer Secretariat Archives.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* New Minutes Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden border border-gray-100 transform transition-all scale-100 animate-in fade-in zoom-in duration-200 my-8">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-slate-900 text-white">
+      {/* Add Minutes Modal */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-100 animate-in fade-in zoom-in duration-200 my-8">
+            <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-white/20 rounded-xl">
-                  <FileText size={20} />
-                </div>
-                <h3 className="text-xl font-bold">Record Meeting Minutes</h3>
+                <div className="p-3 bg-blue-600 rounded-2xl shadow-lg"><FileText size={20} /></div>
+                <h3 className="text-xl font-black tracking-tight uppercase">Archive Meeting Minutes</h3>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                <X size={24} />
-              </button>
+              <button onClick={() => setIsAddModalOpen(false)} className="p-2 hover:bg-white/10 rounded-xl transition-colors"><X size={24} /></button>
             </div>
-
-            <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-8 max-h-[70vh] overflow-y-auto">
-              {/* Sidebar Info */}
-              <div className="md:col-span-1 space-y-6">
+            <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Meeting Details</label>
-                  <div className="space-y-4">
-                    <input 
-                      type="text" 
-                      placeholder="Meeting Title"
-                      value={form.title}
-                      onChange={(e) => setForm({...form, title: e.target.value})}
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none font-bold"
-                    />
-                    <input 
-                      type="date" 
-                      value={form.date}
-                      onChange={(e) => setForm({...form, date: e.target.value})}
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none font-bold"
-                    />
-                    <select 
-                      value={form.category}
-                      onChange={(e) => setForm({...form, category: e.target.value as any})}
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none font-bold"
-                    >
-                      <option value="General">General Meeting</option>
-                      <option value="Music Dept">Music Dept</option>
-                      <option value="Committee">Committee</option>
-                      <option value="Disciplinary">Disciplinary</option>
-                    </select>
-                  </div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Minute Header / Title</label>
+                  <input 
+                    type="text"
+                    value={newMinute.title}
+                    onChange={(e) => setNewMinute({...newMinute, title: e.target.value})}
+                    placeholder="e.g. Second Quarter General Meeting"
+                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-500/10 transition-all"
+                  />
                 </div>
-
                 <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 text-indigo-600">Governance Doc</label>
-                  <button 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex items-center justify-center space-x-2 p-4 bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-2xl text-indigo-600 hover:bg-indigo-100 transition-all group"
-                  >
-                    <Upload size={18} className="group-hover:-translate-y-1 transition-transform" />
-                    <span className="text-xs font-black uppercase tracking-widest">Upload PDF/DOC</span>
-                  </button>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Meeting Date</label>
+                  <input 
+                    type="date"
+                    value={newMinute.date}
+                    onChange={(e) => setNewMinute({...newMinute, date: e.target.value})}
+                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Classification Category</label>
+                <select 
+                  value={newMinute.category}
+                  onChange={(e) => setNewMinute({...newMinute, category: e.target.value as any})}
+                  className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-500/10"
+                >
+                  <option value="General">General (Full Team)</option>
+                  <option value="Music Dept">Music Department</option>
+                  <option value="Committee">Executive Committee</option>
+                  <option value="Disciplinary">Disciplinary Committee</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Upload Scanned Minutes (Optional)</label>
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full p-8 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 transition-all group"
+                >
                   <input 
                     type="file" 
                     ref={fileInputRef} 
                     className="hidden" 
-                    accept=".pdf,.doc,.docx" 
-                    onChange={handleFileChange} 
+                    accept=".pdf,.doc,.docx,image/*"
+                    onChange={handleFileChange}
                   />
-                  {form.fileName && (
-                    <div className="mt-2 p-3 bg-green-50 rounded-xl border border-green-100 flex items-center space-x-2 animate-in fade-in">
-                      <Paperclip size={14} className="text-green-600" />
-                      <p className="text-[10px] font-bold text-green-700 truncate">{form.fileName}</p>
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Attendees</label>
-                  <div className="max-h-48 overflow-y-auto border border-gray-100 rounded-xl p-2 space-y-1">
-                    {members.map(m => (
-                      <button
-                        key={m.id}
-                        onClick={() => toggleAttendee(m.name)}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all ${
-                          form.attendees.includes(m.name) 
-                            ? 'bg-slate-900 text-white' 
-                            : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                        }`}
-                      >
-                        {m.name}
-                      </button>
-                    ))}
+                  <div className="p-3 bg-white rounded-xl shadow-sm mb-3 group-hover:scale-110 transition-transform">
+                    <FileUp size={24} className="text-blue-500" />
                   </div>
+                  <p className="text-sm font-bold text-slate-600">
+                    {newMinute.fileName ? newMinute.fileName : "Select PDF or Document file"}
+                  </p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                    {newMinute.fileName ? "Click to change" : "Max size 10MB"}
+                  </p>
                 </div>
               </div>
 
-              {/* Main Content Area */}
-              <div className="md:col-span-2 space-y-4 flex flex-col">
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Meeting Minutes / Summary</label>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Summary / Deliberations</label>
                 <textarea 
-                  value={form.content}
-                  onChange={(e) => setForm({...form, content: e.target.value})}
-                  placeholder="Record discussions, resolutions, and action items here..."
-                  className="flex-1 w-full px-6 py-5 bg-gray-50 border border-gray-200 rounded-3xl outline-none text-gray-700 leading-relaxed min-h-[400px] resize-none"
+                  value={newMinute.content}
+                  onChange={(e) => setNewMinute({...newMinute, content: e.target.value})}
+                  rows={6}
+                  placeholder="Record summary of resolutions here..."
+                  className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-500/10 transition-all resize-none italic"
                 />
               </div>
-            </div>
 
-            <div className="p-8 bg-gray-50 flex space-x-4 border-t border-gray-100">
-              <button onClick={() => setIsModalOpen(false)} className="flex-1 py-4 bg-white border border-gray-200 rounded-2xl font-bold text-gray-500">Cancel</button>
-              <button onClick={handleSave} className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black">Save Minutes</button>
+              <div className="bg-amber-50 p-4 rounded-2xl flex items-start space-x-3 border border-amber-100">
+                <Info size={18} className="text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-[10px] font-bold text-amber-700 leading-relaxed uppercase tracking-tight">
+                  Dispatched archives are accessible to the whole team. Ensure all resolutions are captured accurately.
+                </p>
+              </div>
+
+              <button 
+                onClick={handleSaveMinutes}
+                className="w-full py-5 bg-slate-900 hover:bg-black text-white rounded-[1.5rem] font-black shadow-xl transition-all active:scale-95 flex items-center justify-center space-x-2"
+              >
+                <Save size={20} />
+                <span>Archive Official Record</span>
+              </button>
             </div>
           </div>
         </div>
@@ -318,65 +276,59 @@ const Minutes: React.FC<MinutesProps> = ({ members, minutesList, setMinutesList,
       {/* View Minutes Modal */}
       {viewingMinutes && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md overflow-y-auto">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-gray-100 animate-in fade-in zoom-in duration-300 my-8">
-            <div className="p-10">
-              <div className="flex justify-between items-start mb-8">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-3xl overflow-hidden border border-white/20 transform transition-all animate-in fade-in zoom-in duration-300 my-8">
+            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-900 text-white shadow-lg">
+              <div className="flex items-center space-x-4">
+                <div className="p-3 bg-blue-500/20 rounded-2xl"><BookOpen size={24} className="text-blue-400" /></div>
                 <div>
-                  <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-lg uppercase tracking-widest mb-2 inline-block">
-                    {viewingMinutes.category} Minute Record
-                  </span>
-                  <h3 className="text-3xl font-black text-slate-900 tracking-tight leading-tight">{viewingMinutes.title}</h3>
-                  <p className="text-slate-400 font-bold mt-1 uppercase tracking-widest text-xs">{viewingMinutes.date}</p>
+                  <h3 className="text-xl font-black uppercase tracking-tighter leading-tight">{viewingMinutes.title}</h3>
+                  <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mt-1">{viewingMinutes.category} Archive — {viewingMinutes.date}</p>
                 </div>
-                <button onClick={() => setViewingMinutes(null)} className="p-3 bg-slate-100 text-slate-400 hover:bg-slate-200 rounded-2xl transition-all">
-                  <X size={20} />
-                </button>
               </div>
-
-              <div className="space-y-8">
-                <div className="flex flex-wrap gap-2">
-                  <div className="w-full flex items-center space-x-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                    <Users size={14} />
-                    <span>Roll Call:</span>
-                  </div>
-                  {viewingMinutes.attendees.map((a, i) => (
-                    <span key={i} className="px-3 py-1 bg-slate-100 rounded-full text-xs font-bold text-slate-600">
-                      {a}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 italic text-slate-700 leading-relaxed whitespace-pre-wrap text-sm">
-                  {viewingMinutes.content}
-                </div>
-
+              <div className="flex items-center space-x-3">
                 {viewingMinutes.fileName && (
-                  <div className="p-6 bg-white border border-slate-200 rounded-[2rem] flex items-center justify-between shadow-sm">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-                        <FileText size={24} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-black text-slate-900">{viewingMinutes.fileName}</p>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Authenticated PDF Attachment</p>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => handleDownload(viewingMinutes.fileName!)}
-                      className="flex items-center space-x-2 bg-slate-900 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-600 transition-all active:scale-95"
-                    >
-                      <Download size={14} />
-                      <span>Download</span>
-                    </button>
+                  <button 
+                    onClick={() => handleDownload(viewingMinutes)}
+                    className="p-3 bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors shadow-lg flex items-center space-x-2 text-xs font-black uppercase"
+                  >
+                    <Download size={18} />
+                    <span className="hidden sm:inline">Attachment</span>
+                  </button>
+                )}
+                <button onClick={() => setViewingMinutes(null)} className="p-2 hover:bg-white/10 rounded-xl transition-colors"><X size={24} /></button>
+              </div>
+            </div>
+            <div className="p-10 max-h-[70vh] overflow-y-auto custom-scrollbar space-y-8">
+              {viewingMinutes.attendees && viewingMinutes.attendees.length > 0 && (
+                <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center">
+                    <Users size={14} className="mr-2" /> Present Officials
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {viewingMinutes.attendees.map((a, i) => (
+                      <span key={i} className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600">{a}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="prose prose-slate max-w-none">
+                {viewingMinutes.content ? (
+                  <p className="whitespace-pre-wrap text-slate-700 font-medium leading-relaxed italic bg-slate-50 p-10 rounded-[2.5rem] border border-slate-100 shadow-inner relative">
+                    <span className="absolute top-4 left-4 text-slate-200 text-6xl leading-none font-serif select-none opacity-50">"</span>
+                    {viewingMinutes.content}
+                  </p>
+                ) : (
+                  <div className="p-10 text-center bg-slate-50 rounded-[2.5rem] border border-slate-100 border-dashed">
+                    <Paperclip size={32} className="mx-auto text-slate-300 mb-4" />
+                    <p className="text-slate-500 font-bold italic">No text summary provided. Please refer to the attached document for full details.</p>
                   </div>
                 )}
               </div>
             </div>
-            
-            <div className="p-8 border-t border-slate-50 flex justify-end">
+            <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end">
               <button 
                 onClick={() => setViewingMinutes(null)}
-                className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-slate-200"
+                className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all active:scale-95"
               >
                 Close Record
               </button>

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Users, TrendingUp, Music, AlertCircle, Sparkles, Calendar, ArrowUpRight, Gift, FileText, BadgeAlert, Loader2 } from 'lucide-react';
+import { Users, TrendingUp, Music, AlertCircle, Sparkles, Calendar, ArrowUpRight, Gift, FileText, BadgeAlert, Loader2, Info } from 'lucide-react';
 import { MOCK_SONGS } from '../constants.tsx';
 import { getTeamSummary } from '../geminiService.ts';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
@@ -69,15 +69,20 @@ const Dashboard: React.FC<DashboardProps> = ({ members, finance, cases, events, 
 
   const fetchSummary = async () => {
     setIsRefreshing(true);
-    const summary = await getTeamSummary({
-      memberCount: members.length,
-      financialSummary: isFinanceHidden ? "Summary restricted" : finance,
-      recentSongs: MOCK_SONGS.length,
-      disciplinaryCount: cases.length,
-      role: currentRole
-    });
-    setAiSummary(summary);
-    setIsRefreshing(false);
+    try {
+      const summary = await getTeamSummary({
+        memberCount: members.length,
+        financialSummary: isFinanceHidden ? "Summary restricted" : finance,
+        recentSongs: MOCK_SONGS.length,
+        disciplinaryCount: cases.length,
+        role: currentRole
+      });
+      setAiSummary(summary);
+    } catch (err) {
+      setAiSummary("Unable to generate summary at this time.");
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   useEffect(() => {
@@ -116,6 +121,8 @@ const Dashboard: React.FC<DashboardProps> = ({ members, finance, cases, events, 
   const upcomingEvents = [...events]
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 3);
+
+  const isAIUnavailable = aiSummary.includes("unavailable") || aiSummary.includes("error");
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -277,9 +284,17 @@ const Dashboard: React.FC<DashboardProps> = ({ members, finance, cases, events, 
                     <p className="text-[10px] font-black uppercase tracking-widest text-blue-300 animate-pulse">Scanning Archives...</p>
                   </div>
                 ) : (
-                  <p className="text-blue-100 leading-relaxed italic text-sm font-medium border-l-2 border-blue-500/50 pl-5 py-2">
-                    "{aiSummary}"
-                  </p>
+                  <div className="relative">
+                    {isAIUnavailable && (
+                       <div className="flex items-start space-x-2 text-amber-300 mb-2 opacity-80">
+                         <Info size={14} className="shrink-0 mt-0.5" />
+                         <span className="text-[10px] font-black uppercase tracking-widest">System Advisory</span>
+                       </div>
+                    )}
+                    <p className={`text-blue-100 leading-relaxed italic text-sm font-medium border-l-2 ${isAIUnavailable ? 'border-amber-500/50 text-slate-300' : 'border-blue-500/50'} pl-5 py-2`}>
+                      "{aiSummary}"
+                    </p>
+                  </div>
                 )}
               </div>
 

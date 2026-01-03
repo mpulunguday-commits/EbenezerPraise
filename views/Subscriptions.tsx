@@ -101,7 +101,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ members, subscriptions, s
                     className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-500/10 transition-all"
                   />
                 </div>
-                <p className="text-[9px] text-slate-400 mt-2 font-bold uppercase tracking-tight text-center">Status will be marked "Paid" if >= K{STANDARD_FEE}</p>
+                <p className="text-[9px] text-slate-400 mt-2 font-bold uppercase tracking-tight text-center">Status will be marked "Paid" if &gt;= K{STANDARD_FEE}</p>
               </div>
 
               <button 

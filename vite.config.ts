@@ -2,6 +2,8 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv } from 'vite';
+// Fix: Import the missing react plugin
+import react from '@vitejs/plugin-react';
 
 // Manually define __dirname for ESM environment
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

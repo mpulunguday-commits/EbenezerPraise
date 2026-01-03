@@ -16,7 +16,9 @@ import {
   LogOut,
   Briefcase,
   X,
-  UserCircle
+  UserCircle,
+  Shirt,
+  Mic2
 } from 'lucide-react';
 import { UserRole } from '../types.ts';
 
@@ -37,6 +39,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentRole, currentView, isOpen, onC
     { id: 'attendance', label: currentRole === UserRole.MEMBER ? 'My Attendance' : 'Team Attendance', icon: CheckCircle, roles: [UserRole.ADMIN, UserRole.SECRETARIAT, UserRole.TREASURER, UserRole.MUSIC_DEPT, UserRole.DISCIPLINARY, UserRole.MEMBER] },
     { id: 'events', label: 'Events & News', icon: Calendar, roles: [UserRole.ADMIN, UserRole.SECRETARIAT, UserRole.TREASURER, UserRole.MUSIC_DEPT, UserRole.DISCIPLINARY, UserRole.MEMBER] },
     { id: 'member-finances', label: 'Member Finances', icon: HandCoins, roles: [UserRole.ADMIN, UserRole.SECRETARIAT, UserRole.TREASURER, UserRole.MEMBER] },
+    { id: 'uniforms', label: 'Uniforms & Assets', icon: Shirt, roles: [UserRole.ADMIN, UserRole.SECRETARIAT, UserRole.MEMBER] },
     { id: 'subscriptions', label: 'Monthly Subs', icon: CreditCard, roles: [UserRole.ADMIN, UserRole.TREASURER] },
     { id: 'harvest', label: 'Harvest Assessment', icon: Wheat, roles: [UserRole.ADMIN, UserRole.TREASURER] },
     { id: 'projects', label: 'Team Projects', icon: Briefcase, roles: [UserRole.ADMIN, UserRole.TREASURER] },

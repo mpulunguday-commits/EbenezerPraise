@@ -181,6 +181,26 @@ CREATE TABLE IF NOT EXISTS concert_finances (
   status TEXT DEFAULT 'Planning'
 );
 
+-- 17. Uniforms & Wardrobe
+CREATE TABLE IF NOT EXISTS uniforms (
+  id TEXT PRIMARY KEY,
+  "memberId" TEXT REFERENCES members(id) ON DELETE CASCADE,
+  "memberName" TEXT,
+  "itemName" TEXT,
+  size TEXT,
+  "issuedDate" TEXT,
+  status TEXT DEFAULT 'Issued'
+);
+
+-- 18. Team Equipment Assets
+CREATE TABLE IF NOT EXISTS equipment (
+  id TEXT PRIMARY KEY,
+  name TEXT,
+  category TEXT,
+  condition TEXT,
+  "lastServiceDate" TEXT
+);
+
 -- SEED DATA
 INSERT INTO members (id, name, role, "voicePart", "cellGroup", "phoneNumber", "dateOfBirth", status, "joinedDate", username, password)
 VALUES ('m1', 'Super Admin', 'Team Leader', 'Tenor', 'Central', '+260970000001', '1990-01-01', 'Active', '2020-01-01', 'admin', 'admin123')

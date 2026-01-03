@@ -18,7 +18,8 @@ import PortalSelector from './views/PortalSelector.tsx';
 import Landing from './views/Landing.tsx';
 import Profile from './views/Profile.tsx';
 import SupabaseSetup from './views/SupabaseSetup.tsx';
-import { UserRole, Member, FinancialRecord, SubscriptionRecord, HarvestRecord, MemberContribution, DisciplinaryCase, GroupRule, MeetingMinutes, AttendanceRecord, Song, TeamEvent, Announcement, CommitteeMember, TeamProject, ProjectTransaction, ConcertFinance } from './types.ts';
+import Uniforms from './views/Uniforms.tsx';
+import { UserRole, Member, FinancialRecord, SubscriptionRecord, HarvestRecord, MemberContribution, DisciplinaryCase, GroupRule, MeetingMinutes, AttendanceRecord, Song, TeamEvent, Announcement, CommitteeMember, TeamProject, ProjectTransaction, ConcertFinance, UniformAssignment, TeamAsset } from './types.ts';
 import { 
   MOCK_MEMBERS, 
   MOCK_FINANCE, 
@@ -73,6 +74,8 @@ const App: React.FC<AppProps> = ({ onBooted }) => {
   const [projects, setProjects] = useState<TeamProject[]>(MOCK_PROJECTS);
   const [projectTransactions, setProjectTransactions] = useState<ProjectTransaction[]>(MOCK_PROJECT_TRANSACTIONS);
   const [concerts, setConcerts] = useState<ConcertFinance[]>(MOCK_CONCERTS);
+  const [uniforms, setUniforms] = useState<UniformAssignment[]>([]);
+  const [assets, setAssets] = useState<TeamAsset[]>([]);
 
   const currentMember = currentUser?.member_id 
     ? members.find(m => m.id === currentUser.member_id) 
@@ -108,7 +111,9 @@ const App: React.FC<AppProps> = ({ onBooted }) => {
           fetchTable('committee_members', setCommitteeMembers),
           fetchTable('team_projects', setProjects),
           fetchTable('project_transactions', setProjectTransactions),
-          fetchTable('concert_finances', setConcerts)
+          fetchTable('concert_finances', setConcerts),
+          fetchTable('uniforms', setUniforms),
+          fetchTable('equipment', setAssets)
         ]);
       } catch (err: any) {
         if (err.message?.includes('SCHEMA_MISSING')) {
@@ -143,7 +148,9 @@ const App: React.FC<AppProps> = ({ onBooted }) => {
         { name: 'committee_members', data: committeeMembers },
         { name: 'team_projects', data: projects },
         { name: 'project_transactions', data: projectTransactions },
-        { name: 'concert_finances', data: concerts }
+        { name: 'concert_finances', data: concerts },
+        { name: 'uniforms', data: uniforms },
+        { name: 'equipment', data: assets }
       ];
 
       for (const t of tables) {
@@ -153,7 +160,7 @@ const App: React.FC<AppProps> = ({ onBooted }) => {
     
     const debounceTimer = setTimeout(syncToRemote, 1000);
     return () => clearTimeout(debounceTimer);
-  }, [members, generalFinance, events, announcements, contributions, attendanceRecords, disciplinaryCases, songs, minutes, harvests, subscriptions, rules, committeeMembers, projects, projectTransactions, concerts, needsSetup]);
+  }, [members, generalFinance, events, announcements, contributions, attendanceRecords, disciplinaryCases, songs, minutes, harvests, subscriptions, rules, committeeMembers, projects, projectTransactions, concerts, uniforms, assets, needsSetup]);
 
   // Deletion Helper
   const createDeleteHandler = (table: string, setter: React.Dispatch<React.SetStateAction<any[]>>) => {
@@ -194,6 +201,7 @@ const App: React.FC<AppProps> = ({ onBooted }) => {
       case 'attendance': return <Attendance members={members} currentRole={currentRole} attendanceRecords={attendanceRecords} setAttendanceRecords={setAttendanceRecords} />;
       case 'events': return <EventsNews currentRole={currentRole} events={events} setEvents={setEvents} announcements={announcements} setAnnouncements={setAnnouncements} onDeleteEvent={createDeleteHandler('team_events', setEvents)} onDeleteAnnouncement={createDeleteHandler('announcements', setAnnouncements)} />;
       case 'member-finances': return <MemberFinances currentRole={currentRole} members={members} contributions={contributions} setContributions={setContributions} subscriptions={subscriptions} harvests={harvests} initialMemberId={targetMemberIdForFinance || undefined} onCloseDetail={() => setTargetMemberIdForFinance(null)} onDeleteContribution={createDeleteHandler('member_contributions', setContributions)} />;
+      case 'uniforms': return <Uniforms currentRole={currentRole} members={members} uniforms={uniforms} setUniforms={setUniforms} assets={assets} setAssets={setAssets} onDeleteUniform={createDeleteHandler('uniforms', setUniforms)} onDeleteAsset={createDeleteHandler('equipment', setAssets)} />;
       case 'subscriptions': return <Subscriptions members={members} subscriptions={subscriptions} setSubscriptions={setSubscriptions} currentRole={currentRole} onDeleteSubscription={createDeleteHandler('subscriptions', setSubscriptions)} />;
       case 'harvest': return <HarvestAssessments members={members} harvests={harvests} setHarvests={setHarvests} currentRole={currentRole} onDeleteHarvest={createDeleteHandler('harvest_records', setHarvests)} />;
       case 'projects': return <Projects currentRole={currentRole} projects={projects} setProjects={setProjects} transactions={projectTransactions} setTransactions={setProjectTransactions} onDeleteProject={createDeleteHandler('team_projects', setProjects)} onDeleteTransaction={createDeleteHandler('project_transactions', setProjectTransactions)} />;

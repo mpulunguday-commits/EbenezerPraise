@@ -23,6 +23,25 @@ export interface Member {
   password?: string;
 }
 
+export interface UniformAssignment {
+  id: string;
+  memberId: string;
+  memberName: string;
+  itemName: string;
+  size: string;
+  issuedDate: string;
+  status: 'Issued' | 'Returned' | 'Lost';
+}
+
+export interface TeamAsset {
+  id: string;
+  name: string;
+  category: 'Microphone' | 'Instrument' | 'Sound System' | 'Furniture' | 'Other';
+  condition: 'New' | 'Good' | 'Fair' | 'Damaged' | 'Repair Needed';
+  lastServiceDate: string;
+  assignedTo?: string;
+}
+
 export interface CommitteeMember {
   id: string;
   memberId: string;
@@ -152,13 +171,6 @@ export interface GroupRule {
   category: 'Punctuality' | 'Uniform' | 'Conduct' | 'Financial' | 'General' | 'Other';
   effectiveDate: string;
   fileName?: string;
-}
-
-export interface ViolationPreset {
-  id: string;
-  label: string;
-  amount: number;
-  category: string;
 }
 
 export interface MeetingMinutes {
